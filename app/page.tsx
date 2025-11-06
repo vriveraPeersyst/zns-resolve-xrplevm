@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Faucet } from "@/components/faucet";
+import { Transfer } from "@/components/transfer";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
-  const [network, setNetwork] = useState<"Devnet" | "Testnet">("Testnet");
 
   // We’ll track if we are mounted so SSR doesn’t mismatch client logic
   const [isMounted, setIsMounted] = useState(false);
@@ -32,7 +31,7 @@ export default function Home() {
   return (
     <main className="flex flex-col min-h-screen w-full">
       <div className="flex items-center justify-center my-10 md:my-37">
-        <Faucet network={network} setNetwork={setNetwork} />
+        <Transfer />
       </div>
       <Footer />
     </main>

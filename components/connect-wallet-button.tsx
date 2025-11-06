@@ -23,9 +23,11 @@ interface ConnectWalletButtonProps {
   className?: string;
   onConnected?: (address: string) => void;
   onDisconnected?: () => void;
+  connectedDomain?: string | null;
+  isResolvingDomain?: boolean;
 }
 
-export function ConnectWalletButton({ className, onConnected, onDisconnected }: ConnectWalletButtonProps) {
+export function ConnectWalletButton({ className, onConnected, onDisconnected, connectedDomain, isResolvingDomain }: ConnectWalletButtonProps) {
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
   const [, setIsReturningUser] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -172,12 +174,16 @@ export function ConnectWalletButton({ className, onConnected, onDisconnected }: 
   // If user is connected
   if (connectedAccount) {
     const shortAddr = `${connectedAccount.slice(0, 6)}...${connectedAccount.slice(-4)}`;
+    const displayName = connectedDomain || shortAddr;
+    
     return (
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="lg" className={cn("gap-2 bg-white/[0.04] border-white/[0.08]", className)}>
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="font-semibold">{shortAddr}</span>
+            <span className="font-semibold">
+              {isResolvingDomain ? `${shortAddr}...` : displayName}
+            </span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-40 p-2">

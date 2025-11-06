@@ -9,11 +9,14 @@ const workSans = Work_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "XRPL EVM Sidechain Faucet",
+  title: "XRPL EVM Transfer - Send XRP with .xrpl Domain Support",
   description:
-    "Discover XRPL EVM Sidechain, combining XRPL’s security and speed with full Ethereum compatibility powered by XRP. Build and run your dApps with low fees, fast settlements, and maximum efficiency.",
+    "Send XRP on XRPL EVM Mainnet with support for .xrpl domain resolution via ZNS. Transfer native XRP to addresses or .xrpl domains seamlessly.",
   keywords: [
-    "XRPL EVM Sidechain",
+    "XRPL EVM",
+    "XRPL Transfer",
+    "ZNS",
+    "xrpl domains",
     "Ethereum Virtual Machine",
     "XRPL",
     "Smart Contracts",
@@ -21,14 +24,15 @@ export const metadata: Metadata = {
     "DeFi",
     "dApps",
     "Ethereum Compatibility",
-    "XRP Staking",
-    "Interoperability",
+    "XRP",
     "Web3",
+    "ENS",
+    "Domain Names",
   ],
   openGraph: {
-    title: "XRPL EVM Sidechain – The Future of Ethereum Compatibility",
+    title: "XRPL EVM Transfer – Send XRP with .xrpl Domain Support",
     description:
-      "Integrate and scale your applications with XRPL EVM Sidechain, the ultimate blend of security, speed, and Ethereum compatibility.",
+      "Transfer XRP on XRPL EVM Mainnet with seamless .xrpl domain resolution powered by ZNS.",
     url: "https://xrplevm.org",
     type: "website",
   },
