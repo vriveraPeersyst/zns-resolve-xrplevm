@@ -361,7 +361,17 @@ export function Transfer(): JSX.Element {
                   </div>
                 )}
                 {!isResolvingName && recipient.toLowerCase().endsWith(".xrpl") && !resolvedAddress && recipient.length > 5 && (
-                  <span className="text-sm text-red-400">✗ Domain not found or not registered</span>
+                  <div className="text-sm text-red-400 flex items-center gap-2">
+                    <span>✗ Domain not found or not registered</span>
+                    <Link
+                      href={`https://zns.bio/search?tab=smart&domain=${encodeURIComponent(recipient.toLowerCase().replace(/\.xrpl$/, ''))}&chain=1440000`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-gray-300 underline text-xs opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                      Buy it now!
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
