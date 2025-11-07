@@ -1,19 +1,20 @@
 import { ExternalLinkProps } from "./external-link";
 
 export const buildLinks: ExternalLinkProps[] = [
-  {
-    label: "Cross-Chain apps",
-    href: "https://crosschain.xrplevm.org/",
-    external: true,
-  },
+  
   {
     label: "Docs",
     href: "https://docs.xrplevm.org/",
     external: true,
   },
   {
+    label: "Bridge Docs",
+    href: "https://docs.xrplevm.org/pages/bridge",
+    external: true,
+  },
+  {
     label: "API Docs",
-    href: "https://explorer.testnet.xrplevm.org/api-docs",
+    href: "https://explorer.xrplevm.org/api-docs",
     external: true,
   },
   {
@@ -21,16 +22,12 @@ export const buildLinks: ExternalLinkProps[] = [
     href: "https://github.com/xrplevm",
     external: true,
   },
-  {
-    label: "FAQs",
-    href: "#faqs",
-  },
 ];
 
 export const ecosystemLinks: ExternalLinkProps[] = [
   {
     label: "Bridge",
-    href: "https://bridge.xrplevm.org/bridge",
+    href: "https://explorer.xrplevm.org/apps?category=Bridge",
     external: true,
   },
   {
@@ -40,22 +37,22 @@ export const ecosystemLinks: ExternalLinkProps[] = [
   },
   {
     label: "EVM Explorer",
-    href: "https://explorer.testnet.xrplevm.org/",
+    href: "https://explorer.xrplevm.org/",
     external: true,
   },
   {
     label: "Cosmos Explorer",
-    href: "https://governance.xrplevm.org/xrp",
+    href: "https://governance.xrplevm.org/xrplevm",
     external: true,
   },
   {
-    label: "Wallets",
+    label: "Use MetaMask In-App Browser from Mobile.",
     href: "https://metamask.io/download",
     external: true,
   },
   {
     label: "All dApps",
-    href: "https://explorer.testnet.xrplevm.org/apps",
+    href: "https://explorer.xrplevm.org/apps",
     external: true,
   },
 ];
@@ -77,13 +74,13 @@ export const communityLinks: ExternalLinkProps[] = [
     external: true,
   },
   {
-    label: "Discord",
+    label: "XRPL EVM Discord",
     href: "https://discord.gg/xrplevm",
     external: true,
   },
   {
-    label: "Twitter/X",
-    href: "https://x.com/RippleXDev",
+    label: "X/Peersyst",
+    href: "https://x.com/Peersyst",
     external: true,
   },
 ];
