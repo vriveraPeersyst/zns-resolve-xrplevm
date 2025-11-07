@@ -54,6 +54,9 @@ export function Transfer(): JSX.Element {
   const [isResolvingName, setIsResolvingName] = useState<boolean>(false);
   const [isResolvingConnectedAddress, setIsResolvingConnectedAddress] = useState<boolean>(false);
   const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
+  const [isTypingAnimation, setIsTypingAnimation] = useState<boolean>(false);
+  const [previousRecipientLength, setPreviousRecipientLength] = useState<number>(0);
+  const [deleteCount, setDeleteCount] = useState<number>(0);
 
   const ethereum = getEthereumProvider();
   const hasMetaMask: boolean = Boolean(ethereum);
@@ -141,6 +144,64 @@ export function Transfer(): JSX.Element {
 
     resolveConnectedAddress();
   }, [connectedAddress]);
+
+  // Magical typing animation: auto-complete with .xrpl after 0.74s pause
+  useEffect(() => {
+    // Only trigger if:
+    // 1. User has typed something
+    // 2. Input doesn't already end with .xrpl
+    // 3. Input doesn't contain a dot (to avoid interfering with addresses)
+    // 4. Input is not empty
+    // 5. Not currently animating
+    if (!recipient || recipient.includes('.') || recipient.trim() === '' || isTypingAnimation) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const xrplSuffix = '.xrpl';
+      let currentIndex = 0;
+      const baseText = recipient; // Capture the base text at start
+      setIsTypingAnimation(true);
+
+      const typeNextChar = () => {
+        if (currentIndex < xrplSuffix.length) {
+          setRecipient(baseText + xrplSuffix.substring(0, currentIndex + 1));
+          currentIndex++;
+          setTimeout(typeNextChar, 80); // 80ms between each character
+        } else {
+          setIsTypingAnimation(false);
+        }
+      };
+
+      typeNextChar();
+    }, 740); // 0.74 seconds pause
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [recipient, isTypingAnimation]);
+
+  // Detect deletion and auto-clear after 2 backspaces
+  useEffect(() => {
+    // Track if user is deleting
+    if (recipient.length < previousRecipientLength) {
+      // User deleted a character
+      setDeleteCount(prev => prev + 1);
+      
+      // If user has deleted 2 characters, clear the input
+      if (deleteCount >= 1) {
+        setRecipient('');
+        setDeleteCount(0);
+        setPreviousRecipientLength(0);
+        return;
+      }
+    } else if (recipient.length > previousRecipientLength) {
+      // User is typing, reset delete count
+      setDeleteCount(0);
+    }
+    
+    setPreviousRecipientLength(recipient.length);
+  }, [recipient.length, previousRecipientLength, deleteCount]);
 
   const isConnected = connectedAddress !== "";
   const isOnXRPLEVM: boolean = !!chainId && chainId.toLowerCase() === XRPL_EVM_CHAIN_ID_HEX.toLowerCase();
@@ -342,18 +403,20 @@ export function Transfer(): JSX.Element {
                   </span>
                 )}
                 {!isResolvingName && resolvedAddress && (
-                  <div className="text-sm text-green-400 flex items-center gap-2">
-                    <span>✓ Resolves to:</span>
+                  <div className="text-sm text-green-400">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span>✓ Resolves to:</span>
+                    </div>
                     <button
                       onClick={() => copyToClipboard(resolvedAddress)}
-                      className="bg-green-400/10 hover:bg-green-400/20 px-2 py-1 rounded font-mono text-xs transition-colors cursor-pointer flex items-center gap-1 border border-green-400/20"
+                      className="bg-green-400/10 hover:bg-green-400/20 px-2 py-1 rounded font-mono text-xs transition-colors cursor-pointer flex items-center gap-1 border border-green-400/20 w-full sm:w-auto break-all"
                       title="Click to copy address"
                     >
-                      {resolvedAddress}
+                      <span className="break-all">{resolvedAddress}</span>
                       {copiedAddress ? (
-                        <span className="text-green-300">✓</span>
+                        <span className="text-green-300 flex-shrink-0">✓</span>
                       ) : (
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                       )}
