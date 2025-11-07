@@ -53,6 +53,7 @@ export function Transfer(): JSX.Element {
   const [chainId, setChainId] = useState<string | null>(null);
   const [isResolvingName, setIsResolvingName] = useState<boolean>(false);
   const [isResolvingConnectedAddress, setIsResolvingConnectedAddress] = useState<boolean>(false);
+  const [copiedAddress, setCopiedAddress] = useState<boolean>(false);
 
   const ethereum = getEthereumProvider();
   const hasMetaMask: boolean = Boolean(ethereum);
@@ -88,13 +89,15 @@ export function Transfer(): JSX.Element {
     }
   }, [hasMetaMask, ethereum]);
 
-  // Resolve .xrpl names as user types
+  // Resolve .xrpl names as user types - optimized for speed
   useEffect(() => {
     const resolveDebounced = async () => {
-      if (recipient.toLowerCase().endsWith(".xrpl")) {
+      const trimmedRecipient = recipient.trim();
+      
+      if (trimmedRecipient.toLowerCase().endsWith(".xrpl")) {
         setIsResolvingName(true);
         try {
-          const address = await resolveXrplNameToAddress(recipient);
+          const address = await resolveXrplNameToAddress(trimmedRecipient);
           setResolvedAddress(address);
         } catch (error) {
           console.error("Error resolving name:", error);
@@ -104,10 +107,16 @@ export function Transfer(): JSX.Element {
         }
       } else {
         setResolvedAddress(null);
+        setIsResolvingName(false);
       }
     };
 
-    const timer = setTimeout(resolveDebounced, 500);
+    // For better UX: start resolving immediately if .xrpl is complete
+    // Use shorter debounce for completed domains, longer for incomplete ones
+    const isComplete = recipient.toLowerCase().endsWith(".xrpl") && recipient.length > 5;
+    const debounceTime = isComplete ? 100 : 250; // 100ms for complete, 250ms for typing
+    
+    const timer = setTimeout(resolveDebounced, debounceTime);
     return () => clearTimeout(timer);
   }, [recipient]);
 
@@ -135,6 +144,32 @@ export function Transfer(): JSX.Element {
 
   const isConnected = connectedAddress !== "";
   const isOnXRPLEVM: boolean = !!chainId && chainId.toLowerCase() === XRPL_EVM_CHAIN_ID_HEX.toLowerCase();
+
+  // Copy to clipboard function that works on all devices
+  const copyToClipboard = async (text: string): Promise<void> => {
+    try {
+      // Modern browsers with Clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers or when clipboard API is not available
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
 
   const handleAddNetwork = async (): Promise<void> => {
     try {
@@ -297,14 +332,38 @@ export function Transfer(): JSX.Element {
               placeholder="alice.xrpl or 0x..."
               className="rounded-md px-3 py-2 w-full border border-white/20 bg-background text-foreground focus:placeholder-transparent"
             />
-            {isResolvingName && <span className="text-sm text-gray-400">Resolving...</span>}
-            {resolvedAddress && (
-              <span className="text-sm text-green-400">
-                ✓ Resolves to: {resolvedAddress.slice(0, 6)}...{resolvedAddress.slice(-4)}
-              </span>
-            )}
-            {recipient.toLowerCase().endsWith(".xrpl") && !isResolvingName && !resolvedAddress && (
-              <span className="text-sm text-red-400">✗ Could not resolve domain</span>
+            {/* Enhanced real-time feedback */}
+            {recipient.toLowerCase().includes('.xrpl') && (
+              <div className="space-y-1">
+                {isResolvingName && (
+                  <span className="text-sm text-blue-400 flex items-center gap-1">
+                    <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    Resolving domain...
+                  </span>
+                )}
+                {!isResolvingName && resolvedAddress && (
+                  <div className="text-sm text-green-400 flex items-center gap-2">
+                    <span>✓ Resolves to:</span>
+                    <button
+                      onClick={() => copyToClipboard(resolvedAddress)}
+                      className="bg-green-400/10 hover:bg-green-400/20 px-2 py-1 rounded font-mono text-xs transition-colors cursor-pointer flex items-center gap-1 border border-green-400/20"
+                      title="Click to copy address"
+                    >
+                      {resolvedAddress}
+                      {copiedAddress ? (
+                        <span className="text-green-300">✓</span>
+                      ) : (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                )}
+                {!isResolvingName && recipient.toLowerCase().endsWith(".xrpl") && !resolvedAddress && recipient.length > 5 && (
+                  <span className="text-sm text-red-400">✗ Domain not found or not registered</span>
+                )}
+              </div>
             )}
           </div>
 

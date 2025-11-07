@@ -5,6 +5,20 @@ import { XRPL_EVM } from './xrplEvm';
 // ZNS Registry address (verified)
 export const ZNS_REGISTRY = '0xf180136DdC9e4F8c9b5A9FE59e2b1f07265C5D4D' as const;
 
+// Simple in-memory cache for faster repeated lookups
+const resolutionCache = new Map<string, { address: `0x${string}` | null; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+// Clear expired cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of resolutionCache.entries()) {
+    if (now - value.timestamp > CACHE_DURATION) {
+      resolutionCache.delete(key);
+    }
+  }
+}, CACHE_DURATION);
+
 // Domain lookup ABI - returns tokenId as uint256
 const ABI_DOMAIN_LOOKUP = [
   {
@@ -93,14 +107,27 @@ export const publicClient = createPublicClient({
   transport: http(XRPL_EVM.rpcUrls.default.http[0]),
 });
 
-// Try resolving owner for a ".xrpl" name
+// Try resolving owner for a ".xrpl" name - optimized for speed with caching
 export async function resolveXrplNameToAddress(name: string): Promise<`0x${string}` | null> {
   if (!name.toLowerCase().endsWith('.xrpl')) return null;
 
   // Strip the .xrpl suffix since the registry stores names without TLD
   const nameWithoutTld = name.toLowerCase().replace(/\.xrpl$/, '');
+  
+  // Early validation - empty name after stripping TLD
+  if (!nameWithoutTld.trim()) return null;
 
-  // Try using domainLookup which returns tokenId
+  // Check cache first for instant results
+  const cacheKey = nameWithoutTld;
+  const cached = resolutionCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    return cached.address;
+  }
+
+  let resolvedAddress: `0x${string}` | null = null;
+
+  // Optimized: Try the most efficient method first (domainLookup + registryLookupById)
+  // This is typically faster than registryLookupByName as it's a two-step indexed lookup
   try {
     const tokenId = (await publicClient.readContract({
       address: ZNS_REGISTRY,
@@ -110,7 +137,7 @@ export async function resolveXrplNameToAddress(name: string): Promise<`0x${strin
     })) as bigint;
     
     if (tokenId && tokenId > BigInt(0)) {
-      // Now get the registry data for this token ID
+      // Get the registry data for this token ID
       const registryData = (await publicClient.readContract({
         address: ZNS_REGISTRY,
         abi: ABI_REGISTRY_LOOKUP_BY_ID,
@@ -124,35 +151,45 @@ export async function resolveXrplNameToAddress(name: string): Promise<`0x${strin
       };
       
       if (registryData?.owner && registryData.owner !== '0x0000000000000000000000000000000000000000') {
-        return getAddress(registryData.owner);
+        resolvedAddress = getAddress(registryData.owner);
       }
     }
-  } catch {
-    // Silent fallback to next method
+  } catch (error) {
+    // Log for debugging but continue to fallback
+    console.debug('Primary resolution method failed, trying fallback:', error);
   }
 
   // Fallback: Try registryLookupByName with the name without TLD
-  try {
-    const info = (await publicClient.readContract({
-      address: ZNS_REGISTRY,
-      abi: ABI_REGISTRY_LOOKUP_BY_NAME,
-      functionName: 'registryLookupByName',
-      args: [nameWithoutTld],
-    })) as {
-      owner: `0x${string}`;
-      domainName: string;
-      lengthOfDomain: number;
-      expirationDate: bigint;
-    };
-    
-    if (info?.owner && info.owner !== '0x0000000000000000000000000000000000000000') {
-      return getAddress(info.owner);
+  if (!resolvedAddress) {
+    try {
+      const info = (await publicClient.readContract({
+        address: ZNS_REGISTRY,
+        abi: ABI_REGISTRY_LOOKUP_BY_NAME,
+        functionName: 'registryLookupByName',
+        args: [nameWithoutTld],
+      })) as {
+        owner: `0x${string}`;
+        domainName: string;
+        lengthOfDomain: number;
+        expirationDate: bigint;
+      };
+      
+      if (info?.owner && info.owner !== '0x0000000000000000000000000000000000000000') {
+        resolvedAddress = getAddress(info.owner);
+      }
+    } catch (error) {
+      // Final failure - domain not found or network issue
+      console.debug('Fallback resolution method also failed:', error);
     }
-  } catch {
-    // Domain not found
   }
 
-  return null;
+  // Cache the result (including null results to avoid repeated failed lookups)
+  resolutionCache.set(cacheKey, { 
+    address: resolvedAddress, 
+    timestamp: Date.now() 
+  });
+
+  return resolvedAddress;
 }
 
 // Validate if an address is a valid Ethereum address
